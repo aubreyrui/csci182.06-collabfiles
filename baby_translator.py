@@ -158,6 +158,8 @@ if __name__ == "__main__":
 
     model = TranslationModel(len(processor.vocabulary), embedding_dim=5, hidden_dim=3)
     criterion = nn.CrossEntropyLoss()
+
+    import torch.optim as optim
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     train_df, test_df = train_test_split(processor.df, test_size=0.2, random_state=42)
