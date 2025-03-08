@@ -10,7 +10,7 @@ class TextProcessor:
         self.num_dim = num_dim
         self.df = pd.read_csv(csv_path)
 
-        self.eng_to_tag = {row['English'].lower(): row['Tagalog'].lower() for _, row in self.df.iterrows()}
+        self.eng_to_tag = {row['English'].lower(): row['Tagalog'].lower() for index, row in self.df.iterrows()}
 
         full_text = " ".join(self.df['Tagalog'].dropna().astype(str))
         self.vocabulary = self.create_vocabulary(full_text)
