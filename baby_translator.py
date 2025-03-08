@@ -122,7 +122,7 @@ class TranslationDataset(Dataset):
     def __getitem__(self, idx):
         english_encoded = torch.tensor(self.processor.encode(self.eng_texts[idx]))
         tagalog_encoded = torch.tensor(self.processor.encode(self.tag_texts[idx]))
-        return self.eng_texts[idx], self.tag_texts[idx]
+        return english_encoded[idx], tagalog_encoded[idx]
 
 def text_pipeline(text):
     return torch.tensor([vocab.get(word, vocab["<unk>"]) for word in text.split()], dtype=torch.long)
@@ -139,6 +139,12 @@ def collate_batch(batch):
     else:
         labels = torch.tensor(labels, dtype=torch.long) 
     return torch.stack(padded_texts), labels
+
+embed_dim = 128
+num_classes = 2
+batch_size = 32
+epochs = 10
+learning_rate = 0.001
 
 if __name__ == "__main__":
     csv_path = os.path.expanduser("english_to_tagalog_1000.csv")
@@ -171,14 +177,14 @@ if __name__ == "__main__":
     print(train_dataset[0])
 
     for epoch in range(epochs):
-    total_loss = 0
-    for texts, labels in train_loader:
-        optimizer.zero_grad()
-        outputs = model.forward(texts)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
+        total_loss = 0
+        for texts, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model.forward(texts)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
 
     print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
 
