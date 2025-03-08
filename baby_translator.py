@@ -124,12 +124,42 @@ class TranslationDataset(Dataset):
         tagalog_encoded = torch.tensor(self.processor.encode(self.tag_texts[idx]))
         return self.eng_texts[idx], self.tag_texts[idx]
 
+def text_pipeline(text):
+    return torch.tensor([vocab.get(word, vocab["<unk>"]) for word in text.split()], dtype=torch.long)
+
+def collate_batch(batch):
+    texts, labels = zip(*batch)  
+    max_len = max(len(t) for t in texts) 
+    
+    padded_texts = [torch.cat([t, torch.zeros(max_len - len(t), dtype=torch.long)], dim=0) for t in texts]
+    labels = list(labels)  
+    
+    if isinstance(labels[0], torch.Tensor):  
+        labels = torch.stack(labels)
+    else:
+        labels = torch.tensor(labels, dtype=torch.long) 
+    return torch.stack(padded_texts), labels
 
 if __name__ == "__main__":
     csv_path = os.path.expanduser("english_to_tagalog_1000.csv")
+    df = pd.read_csv(csv_path)
+    from collections import Counter
+
     processor = TextProcessor(csv_path, num_dim=5)
+    word_counter = Counter(" ".join(processor.df['English'].dropna().astype(str)).lower().split() +
+                           " ".join(processor.df['Tagalog'].dropna().astype(str)).lower().split())
+
+    vocab = {word: idx + 1 for idx, (word, index) in enumerate(word_counter.most_common())}
+    vocab["<unk>"] = 0 
+    
+    print("Vocabulary size:", len(vocab))
+    print("Sample Vocabulary:", dict(list(vocab.items())[:30]))  
+
 
     model = TranslationModel(len(processor.vocabulary), embedding_dim=5, hidden_dim=3)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
     train_df, test_df = train_test_split(processor.df, test_size=0.2, random_state=42)
     train_dataset = TranslationDataset(train_df, processor)
     test_dataset = TranslationDataset(test_df, processor)
@@ -137,6 +167,20 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     print(train_dataset[0])
+
+    for epoch in range(epochs):
+    total_loss = 0
+    for texts, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model.forward(texts)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
+
+    print("Training complete!")
 
     print("Translated:", translator(model, processor, "Hello, how are you?"))
     print("Translated:", translator(model, processor, "Good morning"))
