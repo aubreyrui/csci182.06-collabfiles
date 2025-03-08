@@ -3,6 +3,8 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
 
 class TextProcessor:
     def __init__(self, csv_path, num_dim):
@@ -108,11 +110,33 @@ def translator(model, processor, sentence):
 
     return " ".join(translated_words)
 
+class TranslationDataset(Dataset):
+    def __init__(self, df, processor):
+        self.processor = processor
+        self.eng_texts = df['English'].tolist() # Convert to list of English texts
+        self.tag_texts = df['Tagalog'].tolist() # Convert to list of Tagalog texts
+
+    def __len__(self):
+        return len(self.eng_texts)
+
+    def __getitem__(self, idx):
+        english_encoded = torch.tensor(self.processor.encode(self.eng_texts[idx]))
+        tagalog_encoded = torch.tensor(self.processor.encode(self.tag_texts[idx]))
+        return self.eng_texts[idx], self.tag_texts[idx]
+
+
 if __name__ == "__main__":
-    csv_path = os.path.expanduser("~/Desktop/NLP Midterms/english_to_tagalog_1000.csv")
+    csv_path = os.path.expanduser("english_to_tagalog_1000.csv")
     processor = TextProcessor(csv_path, num_dim=5)
 
     model = TranslationModel(len(processor.vocabulary), embedding_dim=5, hidden_dim=3)
+    train_df, test_df = train_test_split(processor.df, test_size=0.2, random_state=42)
+    train_dataset = TranslationDataset(train_df, processor)
+    test_dataset = TranslationDataset(test_df, processor)
+
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    print(train_dataset[0])
 
     print("Translated:", translator(model, processor, "Hello, how are you?"))
     print("Translated:", translator(model, processor, "Good morning"))
