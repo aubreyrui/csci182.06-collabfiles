@@ -17,3 +17,10 @@ to something like MSE (Mean Squared Error) loss as we were making a classificati
 
 
 D. If you were to input an english statement, how would you measure its correctness of translation? (5 pts)
+Measuring its correctness in translating the statement will be done within the translation model itself. 
+The translation model is set into evaluation mode to ensure consistency. Within the model, the sentences in the statement are split 
+into chunks and are translated separately. After that, the softmax function gets the probability of the translated sentence from 
+the trained classification model being similar to the given dataset. Then, using torch.topk, it gets the top 3 predicted Tagalog 
+sentence indices within the dataset and their corresponding probabilities. The highest probability, in terms of percentage, 
+among the three will be the output and will be placed back in the statement. Therefore, consistently high percentages across all
+sentences constitute the translated statement most likely correct.
