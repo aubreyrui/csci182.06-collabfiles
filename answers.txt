@@ -2,7 +2,10 @@ A. Why did you design the output of the network to be what you have in number 2?
 
 
 B. What special tokens did you insert in your vocabulary to be able to have a better translation model? (5 pts)
-
+For the vocabulary to work better with the tranlation model, we used the special token <unk> to handle out-of-vocabulary words.
+<unk>, short for unknown, acts as a placeholder for words not found in the dataset during training. This added to the vocab with an index of 0.
+That way, it ensures that the model can handle unknown words and still make predictions. However, the limitations would be that it treats all
+unknown words the same, so the meaning of these words are overlooked.
 
 C. Explain the loss function that you chose and why it is appropriate for your chosen model design (5 pts)
 Our group chose the Cross Entropy loss function for this model because we wanted to measure how well the model was performing. 
