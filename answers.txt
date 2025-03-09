@@ -1,0 +1,16 @@
+A. Why did you design the output of the network to be what you have in number 2? What was the idea as to why you chose this approach? (5 pts)
+
+
+B. What special tokens did you insert in your vocabulary to be able to have a better translation model? (5 pts)
+
+
+C. Explain the loss function that you chose and why it is appropriate for your chosen model design (5 pts)
+Our group chose the Cross Entropy loss function for this model because we wanted to measure how well the model was performing. 
+The cross-entropy is a popular loss function that is used to measure the performance of a classification machine learning model. 
+It measures the difference between the probability distribution of a classification model and the predicted values of the model. 
+This function is also known as logarithmic loss or log loss. More specifically, we wanted to quantify the ability of our model 
+to correctly match the actual translation outcomes we wanted to acquire. Our group also opted to use Cross Entropy loss in comparison 
+to something like MSE (Mean Squared Error) loss as we were making a classification model, and not developing a regression model.
+
+
+D. If you were to input an english statement, how would you measure its correctness of translation? (5 pts)
