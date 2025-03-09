@@ -8,7 +8,6 @@ from collections import Counter
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 class TranslationModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim, num_classes):
@@ -65,46 +64,61 @@ vocab_tl = build_vocab(df['Tagalog'])
 def text_pipeline(text):
     return torch.tensor([vocab.get(word, vocab["<unk>"]) for word in text.split()], dtype=torch.long)
 
-tfidf_vectorizer = TfidfVectorizer()
-tfidf_matrix_eng = tfidf_vectorizer.fit_transform(df['English'])
-tfidf_scores_eng = dict(zip(tfidf_vectorizer.get_feature_names_out(), tfidf_matrix_eng.sum(axis=0).tolist()[0]))
+def chunk_by_punctuation(text):
+    chunks = re.split(r'([.!?,])', text)  
+    processed_chunks = []
 
-tfidf_vectorizer_tl = TfidfVectorizer()
-tfidf_matrix_tl = tfidf_vectorizer_tl.fit_transform(df['Tagalog'])
-tfidf_scores_tl = dict(zip(tfidf_vectorizer_tl.get_feature_names_out(), tfidf_matrix_tl.sum(axis=0).tolist()[0]))
+    i = 0
+    while i < len(chunks):
+        chunk = chunks[i].strip()
+        if i + 1 < len(chunks) and chunks[i + 1] in ".!?,":
+            chunk += chunks[i + 1]  
+            i += 1  
+        
+        if chunk:  
+            processed_chunks.append(chunk)
+        i += 1  
 
-def get_best_translation(word, word_dict, tfidf_scores_tl):
+    return processed_chunks
 
-    if word in word_dict:
-        possible_translations = [word_dict[word]]
-        return max(possible_translations, key=lambda w: tfidf_scores_tl.get(w, 0))
-    return word 
+def preprocess_chunk(chunk):
+    words_only = re.sub(r'[.!?,]', '', chunk).strip()  
+    punctuation = re.findall(r'[.!?,]', chunk)  
+    return words_only, "".join(punctuation)  
 
-def translate_sentence(model, text, vocab, label_mapping, phrase_dict, word_dict):
+def translate_sentence(model, text, vocab, label_mapping):
+    print(f"\nTranslating: {text}\n")
+
     model.eval()  
-    if text in phrase_dict:
-        return phrase_dict[text]  
+    chunks = chunk_by_punctuation(text)  
+    print(f"Chunks for translation: {chunks}\n")
+
+    translated_chunks = []
     
-    words = text.split()
-    pre_translated_words = [word_dict.get(word, word) for word in words]
-    words_to_translate = [word for word, pre_word in zip(words, pre_translated_words) if word == pre_word]
+    for chunk in chunks:
+        words_only, punctuation = preprocess_chunk(chunk)  
 
-    if not words_to_translate:
-        return " ".join(pre_translated_words)
+        if not words_only:  
+            translated_chunks.append(punctuation)
+            continue  
 
-    text_tensor = torch.tensor([vocab.get(word, vocab["<unk>"]) for word in words_to_translate], dtype=torch.long).unsqueeze(0)
+        words = words_only.split()
+        text_tensor = torch.tensor([vocab.get(word, vocab["<unk>"]) for word in words], dtype=torch.long).unsqueeze(0)
 
-    with torch.no_grad():
-        output = model(text_tensor)
+        with torch.no_grad():
+            output = model(text_tensor)
 
-    predicted_idx = torch.argmax(output, dim=1).item()
-    tagalog_translation = {idx: label for label, idx in label_mapping.items()}
-    model_translation = tagalog_translation.get(predicted_idx, "Unknown")
+        predicted_idx = torch.argmax(output, dim=1).item()
+        tagalog_translation = {idx: label for label, idx in label_mapping.items()}
+        model_translation = tagalog_translation.get(predicted_idx, "Unknown")
 
-    translated_sentence = " ".join(pre_translated_words).replace(" ".join(words_to_translate), model_translation, 1)
+        print(f"Model prediction for chunk '{chunk}': {model_translation}\n")
+        translated_chunks.append(model_translation + punctuation)
 
-    return translated_sentence
+    final_translation = " ".join(translated_chunks)
+    print(f"Final Translated Sentence: {final_translation}\n")
 
+    return final_translation
 
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
 
@@ -113,8 +127,8 @@ test_dataset = TranslationDataset(test_df)
 
 embed_dim = 128
 batch_size = 32
-epochs = 100
-learning_rate = 0.0015
+epochs = 30
+learning_rate = 0.0055
 
 def collate_batch(batch):
     texts, labels = zip(*batch)
@@ -174,12 +188,11 @@ Good morning! I know it's a Sunday, but I just want to tell you I love you.
 How are you? I don't understand why you won't text me back. I'm sorry, okay?
 Can we be friends again? You wont have to call the police next time. I promise.'''
 
-
-translation1 = translate_sentence(model, sample_text1, vocab, train_dataset.label_mapping, direct_mapping_dict, word_to_word_dict)
-translation2 = translate_sentence(model, sample_text2, vocab, train_dataset.label_mapping, direct_mapping_dict, word_to_word_dict)
-translation3 = translate_sentence(model, sample_text3, vocab, train_dataset.label_mapping, direct_mapping_dict, word_to_word_dict)
-translation4 = translate_sentence(model, sample_text4, vocab, train_dataset.label_mapping, direct_mapping_dict, word_to_word_dict)
-translation5 = translate_sentence(model, sample_text5, vocab, train_dataset.label_mapping, direct_mapping_dict, word_to_word_dict)
+translation1 = translate_sentence(model, sample_text1, vocab, train_dataset.label_mapping)
+translation2 = translate_sentence(model, sample_text2, vocab, train_dataset.label_mapping)
+translation3 = translate_sentence(model, sample_text3, vocab, train_dataset.label_mapping)
+translation4 = translate_sentence(model, sample_text4, vocab, train_dataset.label_mapping)
+translation5 = translate_sentence(model, sample_text5, vocab, train_dataset.label_mapping)
 
 print(f"English: {sample_text1}")
 print(f"Tagalog Translation: {translation1}")
@@ -197,7 +210,7 @@ print(f"English: {sample_text5}")
 print(f"Tagalog Translation: {translation5}")
 
 '''
-if you want to see direct mappings
+if you want to see direct mapping
 output_file = "new_mappings_output.txt"
 
 with open(output_file, "w", encoding="utf-8") as f:
