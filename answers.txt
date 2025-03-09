@@ -1,3 +1,9 @@
+MEMBERS: 
+ABDON, Albert
+BAUTISTA, Giuliana
+GARCIA, Regina
+SAN JOSE, Rui
+
 A. Why did you design the output of the network to be what you have in number 2? What was the idea as to why you chose this approach? (5 pts)
 
 Our group decided to create a classification-based model that, given a set english input, outputs its highest probabilistic 
