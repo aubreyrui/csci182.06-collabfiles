@@ -152,8 +152,7 @@ if __name__ == "__main__":
     from collections import Counter
 
     processor = TextProcessor(csv_path, num_dim=5)
-    word_counter = Counter(" ".join(processor.df['English'].dropna().astype(str)).lower().split() +
-                           " ".join(processor.df['Tagalog'].dropna().astype(str)).lower().split())
+    word_counter = Counter(" ".join(processor.df['Tagalog'].dropna().astype(str)).lower().split())
 
     vocab = {word: idx + 1 for idx, (word, index) in enumerate(word_counter.most_common())}
     vocab["<unk>"] = 0 
@@ -162,7 +161,7 @@ if __name__ == "__main__":
     print("Sample Vocabulary:", dict(list(vocab.items())[:30]))  
 
 
-    model = TranslationModel(len(processor.vocabulary), embedding_dim=5, hidden_dim=3)
+    model = TranslationModel(len(vocab), embedding_dim=5, hidden_dim=3)
     criterion = nn.CrossEntropyLoss()
 
     import torch.optim as optim
