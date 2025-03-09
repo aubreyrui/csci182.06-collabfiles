@@ -19,7 +19,7 @@ class TranslationModel(nn.Module):
         embeds = self.embedding(input_text) 
         pooled = embeds.mean(dim=1)  
         output = self.fc(pooled)  
-        return output  
+        return output
     
 class TranslationDataset(Dataset):
     def __init__(self, df):
@@ -36,17 +36,6 @@ class TranslationDataset(Dataset):
         
 csv_path = os.path.expanduser("english_to_tagalog_1000.csv")
 df = pd.read_csv(csv_path)
-
-direct_mapping_dict = {eng: tl for eng, tl in zip(df['English'], df['Tagalog'])}
-word_to_word_dict = {}
-
-for eng, tl in zip(df['English'], df['Tagalog']):
-    eng_words = eng.split()
-    tl_words = tl.split()
-
-    if len(eng_words) == len(tl_words):
-        for e_word, t_word in zip(eng_words, tl_words):
-            word_to_word_dict[e_word] = t_word
 
 def build_vocab(texts):
     word_counter = Counter()
@@ -65,58 +54,58 @@ def text_pipeline(text):
     return torch.tensor([vocab.get(word, vocab["<unk>"]) for word in text.split()], dtype=torch.long)
 
 def chunk_by_punctuation(text):
-    chunks = re.split(r'([.!?,])', text)  
+    chunks = re.split(r'([.!])', text)
     processed_chunks = []
 
     i = 0
     while i < len(chunks):
         chunk = chunks[i].strip()
-        if i + 1 < len(chunks) and chunks[i + 1] in ".!?,":
-            chunk += chunks[i + 1]  
-            i += 1  
-        
+        punctuation = chunks[i + 1] if (i + 1 < len(chunks) and chunks[i + 1] in ".!?") else ""
+
         if chunk:  
-            processed_chunks.append(chunk)
-        i += 1  
+            processed_chunks.append((chunk, punctuation))
+        i += 2  
 
-    return processed_chunks
+    return processed_chunks  
 
-def preprocess_chunk(chunk):
-    words_only = re.sub(r'[.!?,]', '', chunk).strip()  
-    punctuation = re.findall(r'[.!?,]', chunk)  
-    return words_only, "".join(punctuation)  
 
 def translate_sentence(model, text, vocab, label_mapping):
     print(f"\nTranslating: {text}\n")
 
     model.eval()  
     chunks = chunk_by_punctuation(text)  
-    print(f"Chunks for translation: {chunks}\n")
+    print(f"Chunks for translation: {chunks}\n")  
 
     translated_chunks = []
     
-    for chunk in chunks:
-        words_only, punctuation = preprocess_chunk(chunk)  
-
-        if not words_only:  
-            translated_chunks.append(punctuation)
-            continue  
-
-        words = words_only.split()
+    for chunk, punctuation in chunks:
+        words = chunk.split()
         text_tensor = torch.tensor([vocab.get(word, vocab["<unk>"]) for word in words], dtype=torch.long).unsqueeze(0)
 
         with torch.no_grad():
             output = model(text_tensor)
 
-        predicted_idx = torch.argmax(output, dim=1).item()
-        tagalog_translation = {idx: label for label, idx in label_mapping.items()}
-        model_translation = tagalog_translation.get(predicted_idx, "Unknown")
+        probabilities = F.softmax(output, dim=1)  
+        top_probs, top_indices = torch.topk(probabilities, 3)  
 
-        print(f"Model prediction for chunk '{chunk}': {model_translation}\n")
-        translated_chunks.append(model_translation + punctuation)
+        tagalog_translation = {idx: label for label, idx in label_mapping.items()}
+
+        top_predictions = []
+        for i in range(3):
+            pred_idx = top_indices[0, i].item()
+            prob = top_probs[0, i].item()
+            translation = tagalog_translation.get(pred_idx, "Unknown")
+            top_predictions.append((translation, prob))
+
+        print(f"Model predictions for chunk '{chunk}':")
+        for rank, (trans, prob) in enumerate(top_predictions, 1):
+            print(f"  {rank}. {trans} ({prob:.2%})")
+
+        best_translation = top_predictions[0][0]  
+        translated_chunks.append(best_translation + punctuation)  
 
     final_translation = " ".join(translated_chunks)
-    print(f"Final Translated Sentence: {final_translation}\n")
+    print(f"\nFinal Translated Sentence: {final_translation}\n")
 
     return final_translation
 
@@ -208,20 +197,4 @@ print(f"Tagalog Translation: {translation4}")
 
 print(f"English: {sample_text5}")
 print(f"Tagalog Translation: {translation5}")
-
-'''
-if you want to see direct mapping
-output_file = "new_mappings_output.txt"
-
-with open(output_file, "w", encoding="utf-8") as f:
-    f.write("--- Direct Phrase Mappings ---\n")
-    for eng, tl in direct_mapping_dict.items():
-        f.write(f"{eng} -> {tl}\n")
-
-    f.write("\n--- Word-to-Word Mappings ---\n")
-    for eng_word, tl_word in word_to_word_dict.items():
-        f.write(f"{eng_word} -> {tl_word}\n")
-
-print(f"Mappings saved to {output_file}")
-'''
 
