@@ -1,0 +1,7 @@
+torch
+chromadb
+numpy
+pandas
+openai
+langchain
+python-dotenv
