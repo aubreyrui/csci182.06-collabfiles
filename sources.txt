@@ -1,0 +1,1 @@
+For pdf loader: https://python.langchain.com/docs/integrations/document_loaders/pypdfloader/

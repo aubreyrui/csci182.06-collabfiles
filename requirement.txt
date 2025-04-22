@@ -5,3 +5,6 @@ pandas
 openai
 langchain
 python-dotenv
+langchain_community
+unstructured
+python-pptx
