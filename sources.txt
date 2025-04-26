@@ -1,1 +1,2 @@
 For pdf loader: https://python.langchain.com/docs/integrations/document_loaders/pypdfloader/
+For OpenAI embeddings: https://platform.openai.com/docs/guides/embeddings
