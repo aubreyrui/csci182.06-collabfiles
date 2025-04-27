@@ -85,7 +85,24 @@ def query_documents(query_text, top_k=TOP_K):
     )
     return list(zip(results['documents'][0], [metadata['source'] for metadata in results['metadatas'][0]]))
 
+def summarize_context(context_chunks, batch_size=2):
+    summarized_batches = []
+    for i in range(0, len(context_chunks), batch_size):
+        batch = context_chunks[i:i+batch_size]
+        batch_text = "\n\n".join(chunk[0] for chunk in batch)
 
+        prompt = f"Summarize the following information briefly and clearly:\n\n{batch_text}"
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+        summary = response.choices[0].message.content
+        summarized_batches.append(summary)
+
+    final_context = "\n\n".join(summarized_batches)
+    return final_context
+'''
 def summarize_context(context_chunks):
     combined_context = "\n\n".join(chunk[0] for chunk in context_chunks)
     prompt = f"Summarize the information for answering a question: \n\n{combined_context}"
@@ -95,7 +112,7 @@ def summarize_context(context_chunks):
         temperature=0
     )
     return response.choices[0].message.content
-
+'''
 def generate_answer(query, context_chunks):
     context = summarize_context(context_chunks)
     prompt = f"Answer the following question based on the context:\n\n{context}\n\nQuestion: {query}"
