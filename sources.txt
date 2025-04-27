@@ -1,2 +1,3 @@
 For pdf loader: https://python.langchain.com/docs/integrations/document_loaders/pypdfloader/
 For OpenAI embeddings: https://platform.openai.com/docs/guides/embeddings
+For measuring correctness: CSCI 182.06 Canvas module examples (similarity_test.py and similarity_test_rag.py)
