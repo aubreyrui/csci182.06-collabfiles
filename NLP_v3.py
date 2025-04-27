@@ -9,7 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader
 
 #Put API_KEY here or the getenv thingy
 API_KEY = ""
-embedding_model = OpenAIEmbeddings(openai_api_key=API_KEY)
+embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=API_KEY)
 client = OpenAI(api_key=API_KEY)
 
 TOP_K = 3
