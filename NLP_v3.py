@@ -1,11 +1,13 @@
 import os
 import chromadb
+import numpy as np
 from chromadb.config import Settings
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.document_loaders import UnstructuredPowerPointLoader, TextLoader
 from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
+from sklearn.metrics.pairwise import cosine_similarity
 
 #Put API_KEY here or the getenv thingy
 API_KEY = ""
@@ -104,11 +106,48 @@ def generate_answer(query, context_chunks):
     )
     return response.choices[0].message.content
 
+# Similarity test
+def load_ground_truths(filepath):
+    ground_truths = []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            ground_truths = [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        print(f"Error loading ground truths file: {e}")
+    return ground_truths
+
+def get_openai_embedding(text, model="text-embedding-ada-002"):
+    response = client.embeddings.create(
+        input=text,
+        model=model
+    )
+    return response.data[0].embedding
+
+def check_correctness(prediction, ground_truths, threshold=0.8):
+    pred_embedding = get_openai_embedding(prediction)
+    ground_truth_embeddings = [get_openai_embedding(gt) for gt in ground_truths]
+    
+    similarities = cosine_similarity(
+        [pred_embedding], ground_truth_embeddings
+    )
+    
+    top_idx = np.argmax(similarities)
+    top_score = similarities[0][top_idx]
+    
+    print(f"\nTop retrieved ground truth: {ground_truths[top_idx]}")
+    print(f"Similarity score: {top_score:.4f}")
+    
+    is_correct = top_score >= threshold
+    print(f"Is correct?: {is_correct}")
+    
+    return is_correct, ground_truths[top_idx], top_score
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--ingest", help="Folder with documents to ingest")
     parser.add_argument("--query", help="Query to run against the vector DB")
+    parser.add_argument("--ground_truth", help="File with ground truths for correctness checking")
     args = parser.parse_args()
 
     if args.ingest:
@@ -122,3 +161,13 @@ if __name__ == "__main__":
         print("\nSources:")
         for content, source in results:
             print(f"- {source}")
+            
+        if args.ground_truth:
+            ground_truths = load_ground_truths(args.ground_truth)
+            if ground_truths:
+                print("\nChecking correctness...")
+                check_correctness(answer, ground_truths)
+            else:
+                print("No ground truths found or file is empty.")
+        else:
+            print("No ground truths file provided for correctness checking.")
