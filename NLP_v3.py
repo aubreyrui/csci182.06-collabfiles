@@ -8,9 +8,12 @@ from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from sklearn.metrics.pairwise import cosine_similarity
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #Put API_KEY here or the getenv thingy
-API_KEY = ""
+API_KEY = os.getenv("OPENAI_API_KEY")
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=API_KEY)
 client = OpenAI(api_key=API_KEY)
 
