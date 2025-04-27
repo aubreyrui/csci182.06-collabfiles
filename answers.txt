@@ -6,6 +6,15 @@ SAN JOSE, Rui
 
 A. What method did you use to include context information from the records in the database when prompting the LLM for an answer?
 
+We used a summarization method when taking information for our LLM to answer. Specifically, we first collect the top 3 (or at least, based on the amount set on TOP_K) documents relevant to the query question
+which will then be divided into context_chunks inside the summarizer function. From there, a summarized
+context_output (since stuffing is not allowed) will be used as part of the prompt used by OpenAI to provide a response accordingly.
+
+References: 
+https://platform.openai.com/docs/guides/text?api-mode=responses
+https://pypi.org/project/chromadb/
+Code made with help and refinement with OpenAI
+
 B. How did you measure the correctness of the generated response? Give an example.
 
 To measure the correctness of the response, we used a semantic similarity-based test.
