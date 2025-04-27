@@ -14,11 +14,7 @@ client = OpenAI(api_key=API_KEY)
 
 TOP_K = 3
 
-chroma_client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet", 
-    persist_directory="./chroma_store"  
-))
-
+chroma_client = chromadb.PersistentClient(path="./chroma_store")
 collection = chroma_client.get_or_create_collection(name="documents")
 
 def load_files(folder_path):
@@ -65,8 +61,8 @@ def load_files(folder_path):
 
 def ingest_documents(folder_path):
     docs = load_files(folder_path)
-    texts = [content for content, _ in docs]
-    metadatas = [{"source": source} for _, source in docs]
+    texts = [doc.page_content for doc in docs]
+    metadatas = [doc.metadata for doc in docs]
     embeddings = embedding_model.embed_documents(texts)
 
     ids = [f"doc_{i}" for i in range(len(texts))]
@@ -76,7 +72,6 @@ def ingest_documents(folder_path):
         metadatas=metadatas,
         ids=ids
     )
-    chroma_client.persist()
     print("Ingestion complete.")
 
 def query_documents(query_text, top_k=TOP_K):
@@ -86,10 +81,21 @@ def query_documents(query_text, top_k=TOP_K):
         n_results=top_k,
         include=["documents", "metadatas"]
     )
-    return list(zip(results['documents'][0], results['metadatas'][0]['source']))
+    return list(zip(results['documents'][0], [metadata['source'] for metadata in results['metadatas'][0]]))
+
+
+def summarize_context(context_chunks):
+    combined_context = "\n\n".join(chunk[0] for chunk in context_chunks)
+    prompt = f"Summarize the information for answering a question: \n\n{combined_context}"
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    return response.choices[0].message.content
 
 def generate_answer(query, context_chunks):
-    context = "\n\n".join(chunk[0] for chunk in context_chunks)
+    context = summarize_context(context_chunks)
     prompt = f"Answer the following question based on the context:\n\n{context}\n\nQuestion: {query}"
     response = client.chat.completions.create(
         model="gpt-4",
