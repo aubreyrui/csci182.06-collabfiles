@@ -105,17 +105,7 @@ def summarize_context(context_chunks, batch_size=2):
 
     final_context = "\n\n".join(summarized_batches)
     return final_context
-'''
-def summarize_context(context_chunks):
-    combined_context = "\n\n".join(chunk[0] for chunk in context_chunks)
-    prompt = f"Summarize the information for answering a question: \n\n{combined_context}"
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-    return response.choices[0].message.content
-'''
+
 def generate_answer(query, context_chunks):
     context = summarize_context(context_chunks)
     prompt = f"Answer the following question based on the context:\n\n{context}\n\nQuestion: {query}"

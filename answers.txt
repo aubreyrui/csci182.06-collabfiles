@@ -10,10 +10,6 @@ We used a summarization method when taking information for our LLM to answer. Sp
 which will then be divided into context_chunks inside the summarizer function. From there, a summarized
 context_output (since stuffing is not allowed) will be used as part of the prompt used by OpenAI to provide a response accordingly.
 
-References: 
-https://platform.openai.com/docs/guides/text?api-mode=responses
-https://pypi.org/project/chromadb/
-Code made with help and refinement with OpenAI
 
 B. How did you measure the correctness of the generated response? Give an example.
 
