@@ -1,0 +1,28 @@
+MEMBERS: 
+ABDON, Albert
+BAUTISTA, Giuliana
+GARCIA, Regina
+SAN JOSE, Rui
+
+A. What method did you use to include context information from the records in the database when prompting the LLM for an answer?
+
+We used a summarization method when taking information for our LLM to answer. Specifically, we first collect the top 3 (or at least, based on the amount set on TOP_K) documents relevant to the query question
+which will then be divided into context_chunks inside the summarizer function. From there, a summarized
+context_output (since stuffing is not allowed) will be used as part of the prompt used by OpenAI to provide a response accordingly.
+
+
+B. How did you measure the correctness of the generated response? Give an example.
+
+To measure the correctness of the response, we used a semantic similarity-based test.
+Instead of simply checking for exact keyword matches, this compares the meaning of the 
+generated answer with a ground truth answer using vector embeddings and cosine similarity.
+
+A ground truth file would be provided by the user by adding "--ground_truth [some txt file]"
+when running the program. Each line in this file represents one possible correct answer.
+Both the generated answer and all ground truth answers are converted into vector embeddings.
+Their similarity is then compared using cosine similarity. Then, there's a similarity threshold defined (0.80).
+If the generated response's similarity score with the most similar ground truth is greater than or equal to
+this threshold, the response is considered correct.
+
+For example, if the model answered "Phuket is a top beach destination" and the ground truth said "Phuket is ideal for beach lovers,"
+the response would still be marked as correct because of high semantic similarity.
